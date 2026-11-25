@@ -5,6 +5,12 @@ A service layer around the RAG pipeline from
 endpoint with an honest rejection path, a durable job queue, a two-tier answer cache,
 and latency measured as p50/p95 instead of "it feels fast".
 
+Part of a three-project set measured on the same machine:
+[agent-toolbench](https://github.com/xd6ka/agent-toolbench) (tool-calling agent with
+its own reliability benchmark) and
+[pdf-field-extractor](https://github.com/xd6ka/pdf-field-extractor) (schema-checked
+extraction with field-level F1).
+
 Two things this repo can tell you that a demo cannot:
 
 - **A cached answer used to wait 7.7 seconds behind a generation.** The cache was
