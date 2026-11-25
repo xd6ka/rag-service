@@ -1,0 +1,33 @@
+{
+  "questions": [
+    "how does chunking work in this pipeline",
+    "how does the reranker change retrieval",
+    "how is the prompt budget calculated",
+    "what does the citation check verify"
+  ],
+  "token_cap": "40",
+  "runs": [
+    {
+      "cache_before_slot": false,
+      "warm_seconds": 28.33,
+      "seed_ms": 20314.1,
+      "hit_ms": 7741.1,
+      "hit_tier": "exact",
+      "hit_wait_ms": 7717.9,
+      "cold_ms": 10726.2,
+      "cold_cached": false,
+      "batch_wall_s": 10.7
+    },
+    {
+      "cache_before_slot": true,
+      "warm_seconds": 30.55,
+      "seed_ms": 16531.3,
+      "hit_ms": 58.0,
+      "hit_tier": "exact",
+      "hit_wait_ms": 0.0,
+      "cold_ms": 10603.6,
+      "cold_cached": false,
+      "batch_wall_s": 10.6
+    }
+  ]
+}

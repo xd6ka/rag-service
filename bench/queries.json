@@ -1,0 +1,13 @@
+{
+  "_note": "Labelled query set: every list is one intent, every cross-list pair is a different intent. Used by the threshold sweep and by the semantic-cache precision number.",
+  "groups": [
+    ["how does chunking work in this pipeline", "explain the chunking strategy", "what chunk size is used and why"],
+    ["how does the reranker change retrieval", "what does the cross encoder do", "why rerank candidates before answering"],
+    ["how is the prompt budget calculated", "what decides how much context is sent", "why trim context blocks"],
+    ["what does the citation check verify", "how are sources attributed", "does the answer cite the right page"],
+    ["how is the vector store persisted", "where are embeddings stored on disk", "which collection holds the chunks"],
+    ["how are scanned pages handled", "does OCR run on image only PDFs", "what happens when a page has no text layer"],
+    ["how is the answer refusal decided", "when does the assistant say it does not know", "what stops the model from inventing an answer"],
+    ["what embedding model is used", "which sentence transformer encodes the chunks", "what is the embedding dimension"]
+  ]
+}

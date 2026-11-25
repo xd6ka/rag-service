@@ -1,0 +1,9 @@
+fastapi>=0.115
+uvicorn>=0.30
+httpx>=0.27
+numpy>=1.26
+pytest>=8.0
+
+# The real backend additionally runs inside project one's environment:
+#   ../rag-document-assistant/venv  (chromadb, sentence-transformers, torch, openai)
+# See README "Run it".

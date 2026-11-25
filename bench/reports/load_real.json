@@ -1,0 +1,145 @@
+{
+  "backend": "real",
+  "questions": [
+    "how does chunking work in this pipeline",
+    "how does the reranker change retrieval",
+    "how is the prompt budget calculated",
+    "what does the citation check verify"
+  ],
+  "repeats": 2,
+  "levels": [
+    {
+      "concurrency": 1,
+      "requests": 8,
+      "completed": 8,
+      "errors": [],
+      "error_count": 0,
+      "wall_s": 101.6,
+      "throughput_rps": 0.08,
+      "cold": {
+        "count": 7,
+        "p50": 14610.6,
+        "p95": 18004.3,
+        "max": 18598.8
+      },
+      "cached": {
+        "count": 1,
+        "p50": 17.1,
+        "p95": 17.1,
+        "max": 17.1
+      },
+      "hit_rate": 0.125,
+      "tiers": {
+        "semantic": 1,
+        "miss": 7
+      },
+      "server_wait_mean_ms": 0.0,
+      "server_wait_p95_ms": 0.0,
+      "metrics": {
+        "routes": {
+          "uptime_s": 134.9,
+          "routes": {
+            "ask": {
+              "count": 8,
+              "p50": 14582.1,
+              "p90": 17206.9,
+              "p95": 17900.9,
+              "p99": 18456.1,
+              "max": 18594.9,
+              "mean": 12696.2,
+              "wait_p95": 0.0,
+              "wait_mean": 0.0
+            }
+          },
+          "counters": {
+            "cache_cleared": 1,
+            "ask": 8,
+            "cache_hits": 1
+          }
+        },
+        "cache": {
+          "exact_hits": 0,
+          "semantic_hits": 1,
+          "misses": 7,
+          "evictions": 0,
+          "expired": 0,
+          "size": 7,
+          "hit_rate": 0.125
+        },
+        "queue": {
+          "depth": 0,
+          "counts": {}
+        }
+      }
+    },
+    {
+      "concurrency": 4,
+      "requests": 8,
+      "completed": 8,
+      "errors": [],
+      "error_count": 0,
+      "wall_s": 101.0,
+      "throughput_rps": 0.08,
+      "cold": {
+        "count": 7,
+        "p50": 51133.0,
+        "p95": 58632.6,
+        "max": 59866.7
+      },
+      "cached": {
+        "count": 1,
+        "p50": 29.5,
+        "p95": 29.5,
+        "max": 29.5
+      },
+      "hit_rate": 0.125,
+      "tiers": {
+        "semantic": 1,
+        "miss": 7
+      },
+      "server_wait_mean_ms": 25563.4,
+      "server_wait_p95_ms": 41019.5,
+      "metrics": {
+        "routes": {
+          "uptime_s": 238.2,
+          "routes": {
+            "ask": {
+              "count": 16,
+              "p50": 14639.5,
+              "p90": 17603.5,
+              "p95": 18667.5,
+              "p99": 18841.8,
+              "max": 18885.4,
+              "mean": 12676.6,
+              "wait_p95": 40993.2,
+              "wait_mean": 12781.7
+            }
+          },
+          "counters": {
+            "cache_cleared": 2,
+            "ask": 16,
+            "cache_hits": 2
+          }
+        },
+        "cache": {
+          "exact_hits": 0,
+          "semantic_hits": 1,
+          "misses": 7,
+          "evictions": 0,
+          "expired": 0,
+          "size": 7,
+          "hit_rate": 0.125
+        },
+        "queue": {
+          "depth": 0,
+          "counts": {}
+        }
+      }
+    }
+  ],
+  "warm": {
+    "warmed": true,
+    "dimensions": 384,
+    "seconds": 29.96
+  }
+}
