@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>rag-service — live console</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d; --fg: #e6edf3;
+    --muted: #8b949e; --accent: #7ee787; --miss: #f0883e; --hit: #58a6ff; --bad: #ff7b72;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 19px; margin: 0 0 4px; letter-spacing: -0.2px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+           padding: 14px; margin-bottom: 14px; }
+  .panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+              color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  input[type=text] { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);
+                     background: #0d1117; color: var(--fg); font: inherit; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  button { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line);
+           background: #21262d; color: var(--fg); font: inherit; cursor: pointer; }
+  button.primary { background: #238636; border-color: #2ea043; }
+  button:disabled { opacity: .5; cursor: default; }
+  .answer { margin-top: 12px; white-space: pre-wrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px;
+          font-size: 12px; color: var(--muted); }
+  .chip b { color: var(--fg); }
+  .badge { border-radius: 999px; padding: 2px 9px; font-size: 12px; border: 1px solid; }
+  .badge.miss { color: var(--miss); border-color: var(--miss); }
+  .badge.exact { color: var(--hit); border-color: var(--hit); }
+  .badge.semantic { color: var(--accent); border-color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+  th, td { text-align: right; padding: 6px 3px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; white-space: normal; word-break: break-word; }
+  th:nth-child(n+2), td:nth-child(n+2) { white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; }
+  table.demo th:nth-child(2), table.demo td:nth-child(2) { width: 64px; }
+  table.demo th:nth-child(3), table.demo td:nth-child(3) { width: 72px; }
+  table.demo th:nth-child(4), table.demo td:nth-child(4) { width: 84px; }
+  #metrics th:nth-child(1), #metrics td:nth-child(1) { width: 34%; }
+  .sources { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+  .sources li { list-style: none; padding: 2px 0; }
+  .err { color: var(--bad); }
+  .foot { color: var(--muted); font-size: 11.5px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>rag-service <span>live console</span></h1>
+  <div class="sub">real backend · qwen2.5:3b on CPU · one generation worker · cache before the slot</div>
+
+  <div class="panel">
+    <h2>Ask</h2>
+    <input type="text" id="q" value="what two components does retrieval-augmented generation combine" />
+    <div class="row">
+      <button class="primary" id="cold">Ask (cold)</button>
+      <button id="again">Ask again (cached)</button>
+      <button id="demo">Run 4-question demo</button>
+    </div>
+    <div id="out"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Metrics — from GET /metrics</h2>
+    <div class="row" style="margin:0 0 10px"><button id="refresh">Refresh</button></div>
+    <table id="metrics"><tbody><tr><td colspan="2" class="sub">not loaded</td></tr></tbody></table>
+    <div class="foot" id="meta"></div>
+  </div>
+</div>
+
+<script>
+const out = document.getElementById('out');
+const q = document.getElementById('q');
+
+function ms(v) { return v == null ? '—' : (v >= 1000 ? (v/1000).toFixed(1) + ' s' : Math.round(v) + ' ms'); }
+
+function renderAnswer(r) {
+  const badge = `<span class="badge ${r.tier}">${r.tier}</span>`;
+  const t = r.timings || {};
+  return `${badge}
+<div class="answer">${(r.answer || '(no answer)').replace(/</g,'&lt;')}</div>
+<div class="chips">
+  <span class="chip">retrieve <b>${ms(t.retrieve_ms)}</b></span>
+  <span class="chip">generate <b>${ms(t.generate_ms)}</b></span>
+  <span class="chip">total <b>${ms(t.total_ms)}</b></span>
+  <span class="chip">queue wait <b>${ms(r.wait_ms || 0)}</b></span>
+</div>
+<div class="sources"><ul>${(r.sources||[]).map(s =>
+  `<li>${s.source} · p.${s.page} · score ${s.score}</li>`).join('')}</ul></div>`;
+}
+
+async function ask(label) {
+  out.innerHTML = `<div class="sub">${label}: generating… on CPU this takes ~15–20 s</div>`;
+  try {
+    const res = await fetch('/ask', {method:'POST', headers:{'content-type':'application/json'},
+                                     body: JSON.stringify({question: q.value})});
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    const r = await res.json();
+    out.innerHTML = renderAnswer(r);
+  } catch (e) { out.innerHTML = `<div class="err">${e.message}</div>`; }
+}
+
+let busy = false;
+// Edit this list for your own corpus. These four are answerable from the indexed
+// arXiv paper (RAG, Lewis et al. 2020), which is what the demo screenshots were taken with.
+const DEMO_QUESTIONS = [
+  'what two components does retrieval-augmented generation combine',
+  'what is the difference between RAG-Sequence and RAG-Token',
+  'which datasets were used to evaluate RAG',
+  'what knowledge source does the retriever use'
+];
+async function runDemo() {
+  if (busy) return; busy = true;
+  const questions = DEMO_QUESTIONS;
+  const rows = [];
+  out.innerHTML = '<div class="sub">4 questions × (cold, repeat) — about 70 s</div>';
+  for (const question of questions) {
+    q.value = question;
+    const cold = await post(question);
+    const hit = await post(question);
+    rows.push({question, cold, hit});
+    out.innerHTML = table(rows, false);
+    await refreshMetrics();
+  }
+  const para = await post('explain the difference between sequence and token marginalisation');
+  rows.push({question: 'explain the difference between sequence and token marginalisation', cold: null, hit: para});
+  out.innerHTML = table(rows, true);
+  await refreshMetrics();
+  busy = false;
+}
+
+async function post(question) {
+  const res = await fetch('/ask', {method:'POST', headers:{'content-type':'application/json'},
+                                   body: JSON.stringify({question})});
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+function table(rows, done) {
+  const body = rows.map(r => {
+    const cold = r.cold ? `${ms(r.cold.timings.total_ms)}` : '—';
+    const cached = r.hit ? `${ms(r.hit.timings.total_ms)}` : '—';
+    const tier = r.hit ? `<span class="badge ${r.hit.tier}">${r.hit.tier}</span>` : '';
+    return `<tr><td>${r.question}</td><td>${cold}</td><td>${cached}</td><td>${tier}</td></tr>`;
+  }).join('');
+  return `<table class="demo" style="margin-top:12px"><thead><tr>
+      <th>question</th><th>cold</th><th>cached</th><th>tier</th>
+    </tr></thead><tbody>${body}</tbody></table>
+    ${done ? '<div class="foot">Same process, same cache: the second request of each pair is served by the cache tier shown.</div>' : ''}`;
+}
+
+async function refreshMetrics() {
+  const m = await (await fetch('/metrics')).json();
+  const ask = m.routes.routes.ask || {};
+  const cache = m.cache || {};
+  document.getElementById('metrics').innerHTML = `
+    <thead><tr><th>route</th><th>count</th><th>p50</th><th>p95</th><th>wait p95</th></tr></thead>
+    <tbody>
+      <tr><td>ask</td><td>${ask.count ?? 0}</td><td>${ms(ask.p50)}</td><td>${ms(ask.p95)}</td><td>${ms(ask.wait_p95)}</td></tr>
+    </tbody>
+    <thead><tr><th>cache</th><th>exact</th><th>semantic</th><th>miss</th><th>hit rate</th></tr></thead>
+    <tbody>
+      <tr><td>tiers</td><td>${cache.exact_hits ?? 0}</td><td>${cache.semantic_hits ?? 0}</td><td>${cache.misses ?? 0}</td><td>${(cache.hit_rate ?? 0).toFixed(3)}</td></tr>
+    </tbody>`;
+  document.getElementById('meta').textContent =
+    `uptime ${Math.round(m.routes.uptime_s)} s · queue depth ${m.queue.depth} · done jobs ${m.queue.counts.done ?? 0}`;
+}
+
+document.getElementById('cold').onclick = () => ask('cold');
+document.getElementById('again').onclick = () => ask('cached');
+document.getElementById('demo').onclick = runDemo;
+document.getElementById('refresh').onclick = () => refreshMetrics().catch(e => alert(e.message));
+refreshMetrics().catch(() => {});
+</script>
+</body>
+</html>

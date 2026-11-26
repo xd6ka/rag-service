@@ -60,6 +60,32 @@ int8 packing of cache vectors: max score drift 0.0016, identical hit/miss decisi
 at the chosen threshold on all 48 pairs — the quantisation is free here, which is
 also why the README reports it as a number instead of a style choice.
 
+## Demo
+
+The service serves a one-page console at `/demo` (`docs/demo/index.html`, mounted in
+`service/api.py`). It is not a mock: it posts to the real `/ask`, reads the real
+`/metrics`, and displays the timings and cache tier the service returned — same origin,
+so there is no CORS layer and no second process whose numbers could disagree with the
+API's.
+
+Four questions about the indexed paper (RAG, Lewis et al. 2020; 117 chunks from 19 pages),
+each asked twice in one process, cache cleared first:
+
+![console](docs/demo/console_run.png)
+
+- cold 24.8–35.4 s, cached 21–30 ms, 4 exact hits + 1 semantic hit, hit rate 0.556
+- `ask` count 9, p50 37 ms, p95 32.7 s, queue wait p95 0 ms
+
+The same cached hit, with the answer and the pages it was grounded on:
+
+![answer](docs/demo/console_answer.png)
+
+Two notes on honesty: before this paper was indexed the machine held 5 chunks from two
+sample PDFs, so every demo question was refused — correct behaviour, useless demo. And a
+demo session is not a benchmark: four requests cannot produce a p95, so the console is
+evidence that `/metrics` is wired to the code path the service runs, not a replacement
+for the tables above. How the screenshots were taken: `docs/demo/README.md`.
+
 ## Endpoints
 
 | route | what it does |
@@ -69,6 +95,7 @@ also why the README reports it as a number instead of a style choice.
 | `GET /jobs/{id}` | status, result, age |
 | `GET /warm` | load the embedder and read the index without generating — otherwise the first request pays 30–60 s of loading and lands in the p50 |
 | `GET /metrics` | per-route count/p50/p90/p95/p99, queue wait separately, cache tiers, queue depth |
+| `GET /demo` | one-page console that calls the routes above from the same origin |
 | `POST /cache/clear` | start a level from a cold cache |
 
 `/ask` response:

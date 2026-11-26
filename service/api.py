@@ -9,8 +9,10 @@ import os
 import threading
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import config
@@ -21,6 +23,11 @@ from .metrics import Metrics
 from .pipeline import Pipeline
 
 WAIT_TIMEOUT_S = float(os.getenv("RAG_WAIT_TIMEOUT", "20"))
+
+# The one-page console in docs/demo is served by the service itself, so the demo runs
+# against the same origin: no CORS, no second process, and no UI that could display
+# numbers the API did not produce.
+DEMO_DIR = Path(__file__).resolve().parent.parent / "docs" / "demo"
 
 
 class AskRequest(BaseModel):
@@ -51,6 +58,8 @@ def create_app(backend=None, *, store_path: str | None = None, start_workers: bo
         yield
 
     app = FastAPI(title="rag-service", version="1.0", lifespan=lifespan)
+    if DEMO_DIR.exists():
+        app.mount("/demo", StaticFiles(directory=str(DEMO_DIR), html=True), name="demo")
 
     @app.get("/health")
     def health(request: Request) -> dict:
