@@ -1,5 +1,7 @@
 # rag-service
 
+[![tests](https://github.com/xd6ka/rag-service/actions/workflows/tests.yml/badge.svg)](https://github.com/xd6ka/rag-service/actions/workflows/tests.yml)
+
 A service layer around the RAG pipeline from
 [rag-document-assistant](https://github.com/xd6ka/rag-document-assistant): a synchronous
 endpoint with an honest rejection path, a durable job queue, a two-tier answer cache,
