@@ -218,3 +218,7 @@ Reports are committed under `bench/reports/`: `load_stub.json`, `load_real.json`
 `mixed_in_slot.json`, `mixed_stub.json`. `bench/reaggregate_mixed.py` recomputes the
 summaries from the stored per-request rows, so adding a statistic does not cost another
 run of the model.
+
+## Licence
+
+MIT. See `LICENSE`.
