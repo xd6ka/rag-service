@@ -1,0 +1,233 @@
+{
+  "backend": "stub",
+  "cache_before_slot": true,
+  "warm_question": "how does chunking work in this pipeline",
+  "cold_questions": [
+    "how does the reranker change retrieval",
+    "how is the prompt budget calculated",
+    "what does the citation check verify"
+  ],
+  "warm": {
+    "warmed": true,
+    "dimensions": 64,
+    "seconds": 0.0
+  },
+  "prime": {
+    "question": "how does chunking work in this pipeline",
+    "status": 200,
+    "retry_after": null,
+    "client_ms": 5.4,
+    "wait_ms": 0.0,
+    "cached": false,
+    "tier": "miss",
+    "server_ms": 0.5
+  },
+  "idle": {
+    "attempts": 3,
+    "served": 3,
+    "refused": 0,
+    "p50_ms": 3.8,
+    "p95_ms": 4.0,
+    "max_ms": 4.0,
+    "retry_after_values": [],
+    "server_wait_p95_ms": 0.0
+  },
+  "prime_after_clear": {
+    "question": "how does chunking work in this pipeline",
+    "status": 200,
+    "retry_after": null,
+    "client_ms": 4.4,
+    "wait_ms": 0.0,
+    "cached": false,
+    "tier": "miss",
+    "server_ms": 0.4
+  },
+  "cold": {
+    "attempts": 3,
+    "served": 3,
+    "refused": 0,
+    "first_ms": 12.9,
+    "min_ms": 12.9,
+    "p50_ms": 13.2,
+    "p95_ms": 13.6,
+    "max_ms": 13.7,
+    "retry_after_values": [],
+    "server_wait_p95_ms": 0.0
+  },
+  "during_load": {
+    "attempts": 6,
+    "served": 6,
+    "refused": 0,
+    "first_ms": 6.0,
+    "min_ms": 3.7,
+    "p50_ms": 4.5,
+    "p95_ms": 6.0,
+    "max_ms": 6.0,
+    "retry_after_values": [],
+    "server_wait_p95_ms": 0.0
+  },
+  "during_load_rows": [
+    {
+      "question": "how does chunking work in this pipeline",
+      "status": 200,
+      "retry_after": null,
+      "client_ms": 6.0,
+      "wait_ms": 0.0,
+      "cached": true,
+      "tier": "exact",
+      "server_ms": 0.2
+    },
+    {
+      "question": "how does chunking work in this pipeline",
+      "status": 200,
+      "retry_after": null,
+      "client_ms": 5.1,
+      "wait_ms": 0.0,
+      "cached": true,
+      "tier": "exact",
+      "server_ms": 0.1
+    },
+    {
+      "question": "how does chunking work in this pipeline",
+      "status": 200,
+      "retry_after": null,
+      "client_ms": 4.0,
+      "wait_ms": 0.0,
+      "cached": true,
+      "tier": "exact",
+      "server_ms": 0.2
+    },
+    {
+      "question": "how does chunking work in this pipeline",
+      "status": 200,
+      "retry_after": null,
+      "client_ms": 3.7,
+      "wait_ms": 0.0,
+      "cached": true,
+      "tier": "exact",
+      "server_ms": 0.1
+    },
+    {
+      "question": "how does chunking work in this pipeline",
+      "status": 200,
+      "retry_after": null,
+      "client_ms": 5.8,
+      "wait_ms": 0.0,
+      "cached": true,
+      "tier": "exact",
+      "server_ms": 0.6
+    },
+    {
+      "question": "how does chunking work in this pipeline",
+      "status": 200,
+      "retry_after": null,
+      "client_ms": 4.0,
+      "wait_ms": 0.0,
+      "cached": true,
+      "tier": "exact",
+      "server_ms": 0.1
+    }
+  ],
+  "cold_rows": [
+    {
+      "question": "how does the reranker change retrieval",
+      "status": 200,
+      "retry_after": null,
+      "client_ms": 12.9,
+      "wait_ms": 0.0,
+      "cached": true,
+      "tier": "semantic",
+      "server_ms": 0.6
+    },
+    {
+      "question": "how is the prompt budget calculated",
+      "status": 200,
+      "retry_after": null,
+      "client_ms": 13.7,
+      "wait_ms": 0.0,
+      "cached": false,
+      "tier": "miss",
+      "server_ms": 0.6
+    },
+    {
+      "question": "what does the citation check verify",
+      "status": 200,
+      "retry_after": null,
+      "client_ms": 13.2,
+      "wait_ms": 0.0,
+      "cached": false,
+      "tier": "miss",
+      "server_ms": 0.4
+    }
+  ],
+  "metrics": {
+    "routes": {
+      "uptime_s": 6.8,
+      "routes": {
+        "ask": {
+          "count": 14,
+          "p50": 0.2,
+          "p90": 0.6,
+          "p95": 0.6,
+          "p99": 0.6,
+          "max": 0.6,
+          "mean": 0.3,
+          "wait_p95": 0.0,
+          "wait_mean": 0.0
+        }
+      },
+      "counters": {
+        "ask": 14,
+        "cache_hits": 10,
+        "cache_cleared": 1
+      }
+    },
+    "cache": {
+      "exact_hits": 6,
+      "semantic_hits": 1,
+      "misses": 3,
+      "evictions": 0,
+      "expired": 0,
+      "size": 3,
+      "hit_rate": 0.7
+    },
+    "queue": {
+      "depth": 0,
+      "counts": {
+        "done": 6,
+        "running": 1
+      }
+    },
+    "saturation": {
+      "capacity": 1,
+      "timeout_s": 240.0,
+      "active": 0,
+      "waiting": 0,
+      "max_waiting": 0,
+      "rejected": 0,
+      "admitted": 4,
+      "wait_p50_ms": 0.0,
+      "wait_p95_ms": 0.0,
+      "wait_max_ms": 0.0
+    }
+  },
+  "health": {
+    "status": "ok",
+    "backend": "StubBackend",
+    "chunks": null,
+    "workers": 1,
+    "queue_depth": 0,
+    "ask": {
+      "capacity": 1,
+      "timeout_s": 240.0,
+      "active": 0,
+      "waiting": 0,
+      "max_waiting": 0,
+      "rejected": 0,
+      "admitted": 4,
+      "wait_p50_ms": 0.0,
+      "wait_p95_ms": 0.0,
+      "wait_max_ms": 0.0
+    }
+  }
+}

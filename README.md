@@ -23,6 +23,13 @@ Two things this repo can tell you that a demo cannot:
   throughput stayed at 0.08 rps while p95 latency went from 18.0 s to 58.6 s. That is
   why `/ask` returns 429 with `Retry-After` instead of letting requests pile up
   invisibly.
+- **"Cached" is not a constant.** Six cache hits fired into a saturated slot never
+  queue (`wait_ms` 0.0 on all six) but slow from 24 ms idle to 398 ms p50 and 1.0 s
+  worst, because the lookup embeds the question on the same cores the model is using.
+- **The obvious saturation signal was missing.** `/health` used to report
+  `queue_depth: 0` while three requests sat inside `Semaphore.acquire` for forty
+  seconds, and a 429 never reached `/metrics`: the percentiles were computed over the
+  survivors only. The slot now counts waiters, its high-water mark and its refusals.
 
 ## Numbers
 
@@ -50,6 +57,25 @@ generation worker, answers capped at 120 tokens, warm-up excluded.
 |---|---|---|---|
 | cache inside the generation slot | 7741 ms | 7718 ms | 10726 ms |
 | cache before the slot (default) | **58 ms** | 0 ms | 10604 ms |
+
+**Mixed load**, which is the same question asked harder: three cold questions hold
+the single slot, and six asks for an already-cached question are fired every 0.4 s
+into that load. `bench/mixed.py`, two runs of the same script with the placement
+flag flipped:
+
+| placement | idle cached p50 | first hit under load | hits p50 | hits max | served | queue wait |
+|---|---|---|---|---|---|---|
+| cache inside the slot | 24.0 ms | **73.0 s** | 19.4 ms | 73.0 s | 6/6 | 72.9 s on the first |
+| cache before the slot | 24.0 ms | 135 ms | 398 ms | 1.0 s | 6/6 | **0 ms on all six** |
+
+Two things in that table are easy to get wrong. The p50 of the in-slot row (19.4 ms)
+is *lower* than the fast-path p50, because only the first hit pays the queue and the
+other five arrive after it has drained — the row that decides the question is
+`first`, not the median, and this is why the bench reports both. And the fast path is
+fast by not queueing, not by being cheap: it embeds the question while a 3B model is
+building an answer on the same CPU, so it degrades 16× (24 ms → 398 ms, 1.0 s worst)
+and still finishes. The honest claim is "sub-second under saturation", not "30 ms".
+
 
 **Semantic cache threshold** (`bench/cache_threshold.py`, 24 paraphrase pairs, 252
 unrelated pairs, project one's `all-MiniLM-L6-v2`):
@@ -96,7 +122,7 @@ for the tables above. How the screenshots were taken: `docs/demo/README.md`.
 | `POST /jobs` | enqueue; returns `job_id`, `position`, and `duplicate: true` for a repeated `idempotency_key` |
 | `GET /jobs/{id}` | status, result, age |
 | `GET /warm` | load the embedder and read the index without generating — otherwise the first request pays 30–60 s of loading and lands in the p50 |
-| `GET /metrics` | per-route count/p50/p90/p95/p99, queue wait separately, cache tiers, queue depth |
+| `GET /metrics` | per-route count/p50/p90/p95/p99, queue wait separately, cache tiers, job queue depth, and the generation slot's own counters (`active`, `waiting`, `max_waiting`, `rejected`, admitted wait p50/p95/max) |
 | `GET /demo` | one-page console that calls the routes above from the same origin |
 | `POST /cache/clear` | start a level from a cold cache |
 
@@ -163,7 +189,7 @@ The service itself needs little; the real backend needs project one's environmen
 python -m venv venv
 venv\Scripts\activate                  # source venv/bin/activate elsewhere
 pip install -r requirements.txt
-pytest -q                              # 27 tests: API contract, cache, queue, pipeline, metrics
+pytest -q                              # 31 tests: API contract, cache, queue, pipeline, metrics, saturation
 
 # 2) stub load bench, no model involved
 python bench\load.py --backend stub --levels 1,4,8 --out bench\reports\load_stub.json
@@ -177,6 +203,10 @@ python bench\load.py --backend stub --levels 1,4,8 --out bench\reports\load_stub
 
 # 5) semantic threshold sweep (needs the embedder, no generation)
 ..\rag-document-assistant\venv\Scripts\python.exe bench\cache_threshold.py
+
+# 6) mixed load: cached hits fired into a saturated slot, once per placement (about 2 minutes each)
+..\rag-document-assistant\venv\Scripts\python.exe bench\mixed.py --cache-before-slot 1 --out bench\reports\mixed_fast_path.json
+..\rag-document-assistant\venv\Scripts\python.exe bench\mixed.py --cache-before-slot 0 --out bench\reports\mixed_in_slot.json
 ```
 
 Start the API with `uvicorn service.api:app --port 8000` (add `RAG_BACKEND=stub` to run
@@ -184,4 +214,7 @@ without the model). Env: `RAG_WORKERS`, `RAG_MAX_QUEUE`, `RAG_WAIT_TIMEOUT`,
 `RAG_CACHE_*`, `RAG_METRICS_WINDOW`, `RAG_CACHE_BEFORE_SLOT`, `RAG_DB`, `RAG_ROOT`.
 
 Reports are committed under `bench/reports/`: `load_stub.json`, `load_real.json`,
-`cache_before_slot.json`, `cache_threshold.json`.
+`cache_before_slot.json`, `cache_threshold.json`, `mixed_fast_path.json`,
+`mixed_in_slot.json`, `mixed_stub.json`. `bench/reaggregate_mixed.py` recomputes the
+summaries from the stored per-request rows, so adding a statistic does not cost another
+run of the model.

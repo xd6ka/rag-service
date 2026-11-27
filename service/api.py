@@ -21,6 +21,7 @@ from .cache import TwoTierCache
 from .jobs import JobQueue, JobStore, QueueFull
 from .metrics import Metrics
 from .pipeline import Pipeline
+from .slots import GenerationSlot
 
 WAIT_TIMEOUT_S = float(os.getenv("RAG_WAIT_TIMEOUT", "20"))
 
@@ -54,7 +55,7 @@ def create_app(backend=None, *, store_path: str | None = None, start_workers: bo
         app.state.pipeline = pipeline
         app.state.queue = queue
         app.state.store = store
-        app.state.slots = threading.BoundedSemaphore(config.WORKERS)
+        app.state.slot = GenerationSlot(config.WORKERS, WAIT_TIMEOUT_S)
         yield
 
     app = FastAPI(title="rag-service", version="1.0", lifespan=lifespan)
@@ -70,6 +71,9 @@ def create_app(backend=None, *, store_path: str | None = None, start_workers: bo
             "chunks": getattr(pipeline.backend, "chunks", None) if pipeline else None,
             "workers": config.WORKERS,
             "queue_depth": request.app.state.queue.depth if hasattr(request.app.state, "queue") else 0,
+            # Waiting on the generation slot is not the same queue as waiting for a
+            # job, and reporting 0 for both made a saturated service look idle.
+            "ask": request.app.state.slot.snapshot() if hasattr(request.app.state, "slot") else None,
         }
 
     @app.get("/warm")
@@ -101,18 +105,18 @@ def create_app(backend=None, *, store_path: str | None = None, start_workers: bo
                 pipeline.metrics.observe("ask", result["timings"]["total_ms"], 0.0)
                 return result
 
-        slots = request.app.state.slots
-        waited_start = time.perf_counter()
-        if not slots.acquire(timeout=WAIT_TIMEOUT_S):
-            raise HTTPException(status_code=429, detail="busy", headers={"Retry-After": "5"})
-        try:
-            wait_ms = (time.perf_counter() - waited_start) * 1000
+        slot = request.app.state.slot
+        with slot.hold() as (admitted, wait_ms):
+            if not admitted:
+                # Rejected requests are counted, not just discarded: a percentile
+                # table that only sees the survivors reports a healthy service
+                # while it is turning work away.
+                pipeline.metrics.count("ask_rejected")
+                raise HTTPException(status_code=429, detail="busy", headers={"Retry-After": str(int(slot.timeout) + 1)})
             result = pipeline.run(payload.question, found)
-            result["wait_ms"] = round(wait_ms, 1)
+            result["wait_ms"] = wait_ms
             pipeline.metrics.observe("ask", result["timings"]["total_ms"], wait_ms)
             return result
-        finally:
-            slots.release()
 
     @app.post("/jobs", status_code=202)
     def submit(payload: JobRequest, request: Request) -> dict:
@@ -156,6 +160,7 @@ def create_app(backend=None, *, store_path: str | None = None, start_workers: bo
             "routes": pipeline.metrics.snapshot(),
             "cache": pipeline.cache.stats.as_dict(),
             "queue": {"depth": request.app.state.queue.depth, "counts": request.app.state.store.counts()},
+            "saturation": request.app.state.slot.snapshot(),
         }
 
     @app.post("/cache/clear")
